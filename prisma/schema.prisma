@@ -1,0 +1,126 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Preferences stored as JSON string
+  units         String    @default("lbs") // 'kg' or 'lbs'
+  theme         String    @default("system") // 'light', 'dark', 'system'
+  
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  workouts      Workout[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Exercise {
+  id               String   @id @default(cuid())
+  name             String
+  muscleGroup      String   // 'back', 'biceps', 'chest', 'triceps', 'glutes', 'shoulders', 'flexibility', 'mobility'
+  secondaryMuscles String?  // comma-separated
+  difficulty       String   // 'beginner', 'intermediate', 'advanced'
+  equipment        String   // '1 KB', '2 KB', 'None'
+  description      String
+  instructions     String   // JSON array as string
+  tips             String?  // JSON array as string
+  defaultReps      Int      @default(10)
+  defaultSets      Int      @default(3)
+  imageUrl         String?
+  
+  // Relations
+  workoutExercises WorkoutExercise[]
+}
+
+model Workout {
+  id           String    @id @default(cuid())
+  userId       String
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+  
+  // Parameters used to generate
+  energyLevel  String    // 'low', 'medium', 'high'
+  duration     Int       // minutes
+  muscleGroups String    // comma-separated muscle groups
+  
+  // Stats
+  totalVolume  Int?      // calculated after completion
+  notes        String?
+  rating       Int?      // 1-5 stars
+  
+  // Relations
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises    WorkoutExercise[]
+}
+
+model WorkoutExercise {
+  id           String   @id @default(cuid())
+  workoutId    String
+  exerciseId   String
+  orderIndex   Int
+  
+  // Planned values
+  plannedSets  Int
+  plannedReps  Int
+  
+  // Actual values (updated during workout)
+  actualSets   Int?
+  actualReps   String?  // JSON array of reps per set
+  weight       Float?   // in kg (converted on display)
+  completed    Boolean  @default(false)
+  skipped      Boolean  @default(false)
+  
+  // Relations
+  workout      Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise     Exercise @relation(fields: [exerciseId], references: [id])
+  
+  @@unique([workoutId, exerciseId, orderIndex])
+}

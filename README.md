@@ -1,36 +1,180 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏋️ Kettlebell Workout Generator & Tracker
+
+A modern web application for generating personalized kettlebell workouts and tracking your progress over time.
+
+## Features
+
+- **Workout Generator** - Create customized workouts based on:
+  - Energy level (Low/Medium/High)
+  - Available time (15/30/45/60 minutes)
+  - Target muscle groups (Back, Biceps, Chest, Triceps, Glutes, Shoulders, Flexibility, Mobility)
+
+- **Exercise Library** - 90+ kettlebell exercises with:
+  - Difficulty levels
+  - Equipment requirements
+  - Step-by-step instructions
+  - Tips for proper form
+
+- **Workout Tracking** - During workouts:
+  - Adjust reps and sets
+  - Change weights (supports both kg and lbs)
+  - Skip exercises
+  - Track completed sets
+
+- **Progress History** - View past workouts with stats
+
+- **User Accounts** - Save your workouts and preferences
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: SQLite (via Prisma + LibSQL)
+- **Authentication**: NextAuth.js v5
+- **UI Components**: Radix UI
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+
+- npm
+
+### Installation
+
+1. **Install dependencies**
+   ```bash
+   cd app
+   npm install
+   ```
+
+2. **Set up the database**
+   ```bash
+   npx prisma migrate dev
+   ```
+
+3. **Configure environment variables**
+   
+   Create a `.env` file in the `app` directory:
+   ```env
+   # Database
+   DATABASE_URL="file:./dev.db"
+
+   # NextAuth (generate a secure secret for production)
+   AUTH_SECRET="your-secret-key-here"
+
+   # Google OAuth (optional)
+   # GOOGLE_CLIENT_ID="your-google-client-id"
+   # GOOGLE_CLIENT_SECRET="your-google-client-secret"
+   ```
+
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open the app**
+   
+   Visit [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+
+```
+app/
+├── prisma/
+│   ├── schema.prisma     # Database schema
+│   └── dev.db            # SQLite database
+├── src/
+│   ├── app/              # Next.js pages
+│   │   ├── (auth)/       # Auth pages (login, signup)
+│   │   ├── (main)/       # Main app pages
+│   │   └── api/          # API routes
+│   ├── components/       # React components
+│   │   └── ui/           # UI primitives
+│   ├── lib/              # Utilities
+│   │   ├── auth.ts       # NextAuth config
+│   │   ├── db.ts         # Prisma client
+│   │   ├── exercises.ts  # Exercise database
+│   │   └── workout-generator.ts
+│   └── types/            # TypeScript types
+└── .env                  # Environment variables
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Muscle Groups
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app supports 8 muscle groups:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Group | Example Exercises |
+|-------|-------------------|
+| **Back** | Rows, Deadlifts, High Pulls |
+| **Biceps** | Curls, Hammer Curls |
+| **Chest** | Floor Press, Push-ups |
+| **Triceps** | Extensions, Skull Crushers |
+| **Glutes** | Swings, Squats, Lunges |
+| **Shoulders** | Press, Snatch, Clean |
+| **Flexibility** | Turkish Get-Up, Windmill |
+| **Mobility** | Halos, Carries, Figure 8s |
 
-## Learn More
+## Kettlebell Weights
 
-To learn more about Next.js, take a look at the following resources:
+Supports both metric and imperial units:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| kg | lbs |
+|----|-----|
+| 8 | 18 |
+| 12 | 26 |
+| 16 | 35 |
+| 20 | 44 |
+| 24 | 53 |
+| 28 | 62 |
+| 32 | 70 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Development
 
-## Deploy on Vercel
+### Commands
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Development
+npm run dev
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Lint
+npm run lint
+
+# Database commands
+npx prisma studio    # Open database GUI
+npx prisma migrate dev  # Run migrations
+npx prisma generate     # Regenerate client
+```
+
+### Adding New Exercises
+
+Edit `src/lib/exercises.ts` to add new exercises:
+
+```typescript
+{
+  name: "New Exercise",
+  muscleGroup: "back",
+  difficulty: "beginner",
+  equipment: "1 KB",
+  description: "Description here",
+  instructions: ["Step 1", "Step 2"],
+  tips: ["Tip 1"],
+  defaultReps: 10,
+  defaultSets: 3,
+}
+```
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions welcome! Please open an issue or PR.
