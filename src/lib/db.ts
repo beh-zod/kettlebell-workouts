@@ -1,19 +1,16 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
-import { createClient } from '@libsql/client'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
 function createPrismaClient() {
-  // Create libSQL client for local SQLite
-  const libsql = createClient({
-    url: 'file:./prisma/dev.db',
+  // Create Prisma adapter with config
+  const adapter = new PrismaLibSql({
+    url: process.env.DATABASE_URL || 'file:./prisma/dev.db',
+    authToken: process.env.TURSO_AUTH_TOKEN,
   })
-  
-  // Create Prisma adapter
-  const adapter = new PrismaLibSql(libsql)
   
   // Create Prisma client with adapter
   return new PrismaClient({ adapter })
