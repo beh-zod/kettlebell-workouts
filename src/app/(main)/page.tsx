@@ -136,21 +136,21 @@ export default function HomePage() {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {MUSCLE_GROUPS.map((muscle, index) => (
               <button
                 key={muscle.id}
                 onClick={() => toggleMuscle(muscle.id)}
                 className={cn(
-                  "flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-left",
+                  "flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-xl border-2 transition-all text-left min-w-0",
                   `stagger-${index + 1}`,
                   selectedMuscles.includes(muscle.id)
                     ? "border-[#FF0099] bg-[#FF0099]/10 text-[#FF0099]"
                     : "border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-300"
                 )}
               >
-                <span className="text-lg">{muscle.icon}</span>
-                <span className="text-sm font-medium">{muscle.label}</span>
+                <span className="text-base sm:text-lg flex-shrink-0">{muscle.icon}</span>
+                <span className="text-xs sm:text-sm font-medium truncate">{muscle.label}</span>
               </button>
             ))}
           </div>
