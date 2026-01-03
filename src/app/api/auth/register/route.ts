@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         email,
         name,
         passwordHash,
+        updatedAt: new Date(),
       },
     })
 
