@@ -50,28 +50,142 @@ export default function WorkoutPage() {
   const [progress, setProgress] = useState<Map<number, ExerciseProgress>>(new Map())
   const [units, setUnits] = useState<"kg" | "lbs">("lbs")
   const [workoutComplete, setWorkoutComplete] = useState(false)
+  const [workoutId, setWorkoutId] = useState<string | null>(null)
+  const [startTime, setStartTime] = useState<string>(new Date().toISOString())
 
+  // Load workout and progress from storage
   useEffect(() => {
     const stored = sessionStorage.getItem("generatedWorkout")
     if (stored) {
       const data = JSON.parse(stored) as WorkoutData
       setWorkout(data)
-      
-      // Initialize progress for each exercise
-      const initialProgress = new Map<number, ExerciseProgress>()
-      data.exercises.forEach((ex, i) => {
-        initialProgress.set(i, {
-          completedSets: [],
-          weight: 16, // Default 16kg
-          reps: ex.reps,
-          skipped: false,
-        })
-      })
-      setProgress(initialProgress)
+
+      // Try to restore from localStorage first
+      const savedState = localStorage.getItem("activeWorkout")
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState)
+          const progressMap = new Map<number, ExerciseProgress>()
+          Object.entries(parsed.progress).forEach(([key, value]) => {
+            progressMap.set(parseInt(key), value as ExerciseProgress)
+          })
+          setProgress(progressMap)
+          setCurrentIndex(parsed.currentIndex || 0)
+          setUnits(parsed.units || "lbs")
+          setWorkoutId(parsed.workoutId)
+          setStartTime(parsed.startTime || new Date().toISOString())
+        } catch (e) {
+          console.error("Failed to restore workout state:", e)
+          initializeProgress(data)
+        }
+      } else {
+        initializeProgress(data)
+      }
     } else {
       router.push("/")
     }
   }, [router])
+
+  const initializeProgress = (data: WorkoutData) => {
+    const initialProgress = new Map<number, ExerciseProgress>()
+    data.exercises.forEach((ex, i) => {
+      initialProgress.set(i, {
+        completedSets: [],
+        weight: 16, // Default 16kg
+        reps: ex.reps,
+        skipped: false,
+      })
+    })
+    setProgress(initialProgress)
+    setStartTime(new Date().toISOString())
+  }
+
+  // Auto-save to localStorage whenever progress changes
+  useEffect(() => {
+    if (workout && progress.size > 0) {
+      const progressObj: Record<number, ExerciseProgress> = {}
+      progress.forEach((value, key) => {
+        progressObj[key] = value
+      })
+
+      const state = {
+        progress: progressObj,
+        currentIndex,
+        units,
+        workoutId,
+        startTime,
+        lastSaved: new Date().toISOString()
+      }
+
+      localStorage.setItem("activeWorkout", JSON.stringify(state))
+    }
+  }, [progress, currentIndex, units, workout, workoutId, startTime])
+
+  // Periodic database sync (every 30 seconds)
+  useEffect(() => {
+    if (!session?.user?.id || !workout || progress.size === 0) return
+
+    const syncToDatabase = async () => {
+      const exercises = workout.exercises.map((ex, i) => {
+        const prog = progress.get(i)
+        return {
+          exerciseId: ex.exercise.id,
+          orderIndex: i,
+          plannedSets: ex.sets,
+          plannedReps: ex.reps,
+          actualSets: prog?.completedSets.length || 0,
+          actualReps: prog?.completedSets || [],
+          weight: prog?.weight || 0,
+          completed: !prog?.skipped && (prog?.completedSets.length || 0) >= ex.sets,
+          skipped: prog?.skipped || false
+        }
+      })
+
+      try {
+        if (workoutId) {
+          // Update existing workout
+          await fetch(`/api/workouts/${workoutId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ exercises })
+          })
+        } else {
+          // Create new workout (in-progress)
+          const response = await fetch("/api/workouts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: session.user.id,
+              energyLevel: workout.params.energyLevel,
+              duration: workout.params.duration,
+              muscleGroups: workout.params.muscleGroups,
+              exercises,
+              startTime,
+              completedAt: null
+            })
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            setWorkoutId(data.id)
+          }
+        }
+      } catch (error) {
+        console.error("Failed to sync workout:", error)
+      }
+    }
+
+    // Initial sync after 5 seconds
+    const initialTimeout = setTimeout(syncToDatabase, 5000)
+
+    // Periodic sync every 30 seconds
+    const interval = setInterval(syncToDatabase, 30000)
+
+    return () => {
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
+    }
+  }, [session, workout, progress, workoutId, startTime])
 
   if (!workout) {
     return (
@@ -147,6 +261,57 @@ export default function WorkoutPage() {
     updateProgress({ reps: newReps })
   }
 
+  // Save completed workout to database
+  useEffect(() => {
+    if (workoutComplete && workout && session?.user?.id) {
+      saveWorkoutToDatabase()
+    }
+  }, [workoutComplete])
+
+  const saveWorkoutToDatabase = async () => {
+    if (!workout || !session?.user?.id) return
+
+    try {
+      const exercises = workout.exercises.map((ex, i) => {
+        const prog = progress.get(i)
+        return {
+          exerciseId: ex.exercise.id,
+          orderIndex: i,
+          plannedSets: ex.sets,
+          plannedReps: ex.reps,
+          actualSets: prog?.completedSets.length || 0,
+          actualReps: prog?.completedSets || [],
+          weight: prog?.weight || 0,
+          completed: !prog?.skipped && (prog?.completedSets.length || 0) >= ex.sets,
+          skipped: prog?.skipped || false
+        }
+      })
+
+      const response = await fetch("/api/workouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session.user.id,
+          energyLevel: workout.params.energyLevel,
+          duration: workout.params.duration,
+          muscleGroups: workout.params.muscleGroups,
+          exercises,
+          startTime,
+          completedAt: new Date().toISOString()
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setWorkoutId(data.id)
+        // Clear localStorage after successful save
+        localStorage.removeItem("activeWorkout")
+      }
+    } catch (error) {
+      console.error("Failed to save workout:", error)
+    }
+  }
+
   if (workoutComplete) {
     const totalSets = Array.from(progress.values()).reduce(
       (sum, p) => sum + p.completedSets.length, 0
@@ -161,7 +326,7 @@ export default function WorkoutPage() {
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-3xl font-bold mb-2">Workout Complete!</h1>
           <p className="text-zinc-400 mb-6">Great job pushing through today</p>
-          
+
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="p-4 rounded-xl bg-zinc-800/50">
               <div className="text-2xl font-bold text-[#FF0099]">{completedExercises}</div>
@@ -181,7 +346,10 @@ export default function WorkoutPage() {
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => router.push("/")}
+              onClick={() => {
+                localStorage.removeItem("activeWorkout")
+                router.push("/")
+              }}
             >
               <Home className="w-4 h-4 mr-2" />
               Home
@@ -201,6 +369,8 @@ export default function WorkoutPage() {
                   })
                 })
                 setProgress(resetProgress)
+                setStartTime(new Date().toISOString())
+                localStorage.removeItem("activeWorkout")
               }}
             >
               <RotateCcw className="w-4 h-4 mr-2" />
