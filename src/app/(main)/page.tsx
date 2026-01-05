@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { MUSCLE_GROUPS, ENERGY_LEVELS, DURATION_OPTIONS, type MuscleGroup, type EnergyLevel } from "@/types"
 import { generateWorkout } from "@/lib/workout-generator"
-import { Sparkles, Clock, Zap, ChevronRight } from "lucide-react"
+import { Sparkles, Clock, Zap, ChevronRight, Play } from "lucide-react"
 
 export default function HomePage() {
   const router = useRouter()
@@ -15,6 +15,14 @@ export default function HomePage() {
   const [duration, setDuration] = useState<number>(30)
   const [selectedMuscles, setSelectedMuscles] = useState<MuscleGroup[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
+  const [hasActiveWorkout, setHasActiveWorkout] = useState(false)
+
+  // Check for active workout in localStorage
+  useEffect(() => {
+    const activeWorkout = localStorage.getItem("activeWorkout")
+    const generatedWorkout = sessionStorage.getItem("generatedWorkout")
+    setHasActiveWorkout(!!(activeWorkout && generatedWorkout))
+  }, [])
 
   const toggleMuscle = (muscle: MuscleGroup) => {
     setSelectedMuscles(prev =>
@@ -64,6 +72,30 @@ export default function HomePage() {
             Customize your kettlebell session
           </p>
         </div>
+
+        {/* Resume Workout Banner */}
+        {hasActiveWorkout && (
+          <Card className="p-4 mb-6 bg-gradient-to-r from-[#FF0099]/10 to-purple-500/10 border-[#FF0099]/30 animate-slide-up">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#FF0099]/20 flex items-center justify-center">
+                  <Play className="w-5 h-5 text-[#FF0099]" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Workout in Progress</h3>
+                  <p className="text-sm text-zinc-400">Continue where you left off</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => router.push("/workout")}
+                size="sm"
+                className="bg-[#FF0099] hover:bg-[#FF0099]/90"
+              >
+                Resume
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Energy Level */}
         <Card className="p-6 mb-6 animate-slide-up">

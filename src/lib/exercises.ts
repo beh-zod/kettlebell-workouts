@@ -1,6 +1,7 @@
 import type { MuscleGroup, Difficulty } from "@/types"
 
 export interface ExerciseData {
+  id: string
   name: string
   muscleGroup: MuscleGroup
   secondaryMuscles?: MuscleGroup[]
@@ -13,7 +14,12 @@ export interface ExerciseData {
   defaultSets: number
 }
 
-export const exercises: ExerciseData[] = [
+// Helper function to generate ID from exercise name (matches seed.ts logic)
+function generateExerciseId(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+}
+
+const rawExercises: Omit<ExerciseData, 'id'>[] = [
   // BACK EXERCISES
   {
     name: "Single-Arm Row",
@@ -1710,6 +1716,12 @@ export const exercises: ExerciseData[] = [
     defaultSets: 2
   }
 ]
+
+// Map raw exercises to include generated IDs
+export const exercises: ExerciseData[] = rawExercises.map(ex => ({
+  ...ex,
+  id: generateExerciseId(ex.name)
+}))
 
 export function getExercisesByMuscleGroup(muscleGroup: MuscleGroup): ExerciseData[] {
   return exercises.filter(e => e.muscleGroup === muscleGroup)

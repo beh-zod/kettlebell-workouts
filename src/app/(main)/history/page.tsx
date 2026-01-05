@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
@@ -8,36 +8,16 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Calendar, Dumbbell, Clock, TrendingUp, LogIn } from "lucide-react"
 
-// Mock data for demonstration - in production this would come from the database
-const mockWorkouts = [
-  {
-    id: "1",
-    date: new Date(2026, 0, 3),
-    duration: 35,
-    muscleGroups: ["back", "biceps"],
-    exerciseCount: 6,
-    totalSets: 18,
-    totalReps: 180,
-  },
-  {
-    id: "2", 
-    date: new Date(2026, 0, 1),
-    duration: 45,
-    muscleGroups: ["chest", "triceps", "shoulders"],
-    exerciseCount: 8,
-    totalSets: 24,
-    totalReps: 240,
-  },
-  {
-    id: "3",
-    date: new Date(2025, 11, 30),
-    duration: 30,
-    muscleGroups: ["glutes", "flexibility"],
-    exerciseCount: 5,
-    totalSets: 15,
-    totalReps: 150,
-  },
-]
+interface WorkoutData {
+  id: string
+  completedAt: string
+  duration: number
+  muscleGroups: string
+  exercises: {
+    actualSets: number
+    actualReps: string
+  }[]
+}
 
 const muscleGroupColors: Record<string, string> = {
   back: "bg-blue-500/20 text-blue-400",
@@ -53,6 +33,30 @@ const muscleGroupColors: Record<string, string> = {
 export default function HistoryPage() {
   const { data: session } = useSession()
   const [view, setView] = useState<"list" | "calendar">("list")
+  const [workouts, setWorkouts] = useState<WorkoutData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchWorkouts()
+    } else {
+      setIsLoading(false)
+    }
+  }, [session])
+
+  const fetchWorkouts = async () => {
+    try {
+      const response = await fetch("/api/workouts")
+      if (response.ok) {
+        const data = await response.json()
+        setWorkouts(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch workouts:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   if (!session) {
     return (
@@ -74,15 +78,24 @@ export default function HistoryPage() {
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#FF0099]/30 border-t-[#FF0099] rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   // Calculate stats
-  const thisWeekWorkouts = mockWorkouts.filter(w => {
+  const completedWorkouts = workouts.filter(w => w.completedAt)
+  const thisWeekWorkouts = completedWorkouts.filter(w => {
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    return w.date >= weekAgo
+    return new Date(w.completedAt) >= weekAgo
   })
 
-  const totalWorkouts = mockWorkouts.length
-  const totalMinutes = mockWorkouts.reduce((sum, w) => sum + w.duration, 0)
+  const totalWorkouts = completedWorkouts.length
+  const totalMinutes = completedWorkouts.reduce((sum, w) => sum + w.duration, 0)
   const avgDuration = totalWorkouts > 0 ? Math.round(totalMinutes / totalWorkouts) : 0
 
   return (
@@ -173,7 +186,7 @@ export default function HistoryPage() {
         {/* Workout List */}
         {view === "list" && (
           <div className="space-y-4">
-            {mockWorkouts.length === 0 ? (
+            {completedWorkouts.length === 0 ? (
               <Card className="p-8 text-center">
                 <div className="text-4xl mb-4">🏋️</div>
                 <h2 className="text-xl font-semibold mb-2">No workouts yet</h2>
@@ -183,59 +196,72 @@ export default function HistoryPage() {
                 </Button>
               </Card>
             ) : (
-              mockWorkouts.map((workout, index) => (
-                <Card 
-                  key={workout.id} 
-                  className={cn(
-                    "p-4 hover:border-zinc-700 transition-colors cursor-pointer animate-slide-up",
-                    `stagger-${index + 1}`
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-lg font-semibold">
-                          {workout.date.toLocaleDateString("en-US", { 
-                            weekday: "short",
-                            month: "short", 
-                            day: "numeric" 
-                          })}
-                        </span>
-                        <span className="text-sm text-zinc-500">
-                          {workout.duration} min
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {workout.muscleGroups.map(group => (
-                          <span
-                            key={group}
-                            className={cn(
-                              "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
-                              muscleGroupColors[group] || "bg-zinc-700 text-zinc-300"
-                            )}
-                          >
-                            {group}
+              completedWorkouts.map((workout, index) => {
+                const muscleGroupsArray = workout.muscleGroups.split(",")
+                const totalSets = workout.exercises.reduce((sum, ex) => sum + (ex.actualSets || 0), 0)
+                const totalReps = workout.exercises.reduce((sum, ex) => {
+                  try {
+                    const reps = JSON.parse(ex.actualReps || "[]") as number[]
+                    return sum + reps.reduce((a, b) => a + b, 0)
+                  } catch {
+                    return sum
+                  }
+                }, 0)
+
+                return (
+                  <Card
+                    key={workout.id}
+                    className={cn(
+                      "p-4 hover:border-zinc-700 transition-colors cursor-pointer animate-slide-up",
+                      `stagger-${index + 1}`
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-lg font-semibold">
+                            {new Date(workout.completedAt).toLocaleDateString("en-US", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric"
+                            })}
                           </span>
-                        ))}
+                          <span className="text-sm text-zinc-500">
+                            {workout.duration} min
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {muscleGroupsArray.map(group => (
+                            <span
+                              key={group}
+                              className={cn(
+                                "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
+                                muscleGroupColors[group] || "bg-zinc-700 text-zinc-300"
+                              )}
+                            >
+                              {group}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-6 text-center">
+                        <div>
+                          <div className="text-xl font-bold text-[#FF0099]">{workout.exercises.length}</div>
+                          <div className="text-xs text-zinc-500">Exercises</div>
+                        </div>
+                        <div>
+                          <div className="text-xl font-bold">{totalSets}</div>
+                          <div className="text-xs text-zinc-500">Sets</div>
+                        </div>
+                        <div>
+                          <div className="text-xl font-bold">{totalReps}</div>
+                          <div className="text-xs text-zinc-500">Reps</div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-6 text-center">
-                      <div>
-                        <div className="text-xl font-bold text-[#FF0099]">{workout.exerciseCount}</div>
-                        <div className="text-xs text-zinc-500">Exercises</div>
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold">{workout.totalSets}</div>
-                        <div className="text-xs text-zinc-500">Sets</div>
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold">{workout.totalReps}</div>
-                        <div className="text-xs text-zinc-500">Reps</div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))
+                  </Card>
+                )
+              })
             )}
           </div>
         )}
