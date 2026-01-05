@@ -155,7 +155,7 @@ export default function WorkoutPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              userId: session.user.id,
+              userId: session.user!.id,
               energyLevel: workout.params.energyLevel,
               duration: workout.params.duration,
               muscleGroups: workout.params.muscleGroups,
@@ -291,7 +291,7 @@ export default function WorkoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: session.user.id,
+          userId: session.user!.id,
           energyLevel: workout.params.energyLevel,
           duration: workout.params.duration,
           muscleGroups: workout.params.muscleGroups,
