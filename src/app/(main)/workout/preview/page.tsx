@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { SwapExerciseModal } from "@/components/swap-exercise-modal"
 import { cn } from "@/lib/utils"
 import type { ExerciseData } from "@/lib/exercises"
 import type { EnergyLevel, MuscleGroup } from "@/types"
@@ -15,7 +16,8 @@ import {
   GripVertical,
   X,
   Clock,
-  Dumbbell
+  Dumbbell,
+  RefreshCw
 } from "lucide-react"
 
 interface GeneratedExercise {
@@ -37,6 +39,7 @@ export default function WorkoutPreviewPage() {
   const router = useRouter()
   const [workout, setWorkout] = useState<WorkoutData | null>(null)
   const [exercises, setExercises] = useState<GeneratedExercise[]>([])
+  const [swappingIndex, setSwappingIndex] = useState<number | null>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem("generatedWorkout")
@@ -62,6 +65,17 @@ export default function WorkoutPreviewPage() {
 
   const removeExercise = (index: number) => {
     setExercises(exercises.filter((_, i) => i !== index))
+  }
+
+  const swapExercise = (index: number, newExercise: ExerciseData) => {
+    const newExercises = [...exercises]
+    newExercises[index] = {
+      exercise: newExercise,
+      sets: newExercise.defaultSets,
+      reps: newExercise.defaultReps
+    }
+    setExercises(newExercises)
+    setSwappingIndex(null)
   }
 
   const startWorkout = () => {
@@ -176,6 +190,13 @@ export default function WorkoutPreviewPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => setSwappingIndex(index)}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:bg-[#FF0099]/20 hover:text-[#FF0099] transition-colors"
+                    title="Swap exercise"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => moveExercise(index, "up")}
                     disabled={index === 0}
                     className={cn(
@@ -238,6 +259,15 @@ export default function WorkoutPreviewPage() {
           </Button>
         )}
       </div>
+
+      {/* Swap Modal */}
+      {swappingIndex !== null && exercises[swappingIndex] && (
+        <SwapExerciseModal
+          currentExercise={exercises[swappingIndex].exercise}
+          onSwap={(newExercise) => swapExercise(swappingIndex, newExercise)}
+          onClose={() => setSwappingIndex(null)}
+        />
+      )}
     </div>
   )
 }

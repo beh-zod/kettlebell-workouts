@@ -80,6 +80,17 @@ html {
   }
 }
 
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
@@ -92,6 +103,10 @@ html {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
 /* Staggered animations */
 .stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.1s; }
@@ -101,3 +116,12 @@ html {
 .stagger-6 { animation-delay: 0.3s; }
 .stagger-7 { animation-delay: 0.35s; }
 .stagger-8 { animation-delay: 0.4s; }
+
+/* Hide scrollbar for horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

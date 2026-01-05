@@ -12,12 +12,14 @@ import {
   LogOut, 
   User,
   Menu,
-  X
+  X,
+  BookOpen
 } from "lucide-react"
 import { useState } from "react"
 
 const navItems = [
   { href: "/", label: "Workout", icon: Dumbbell },
+  { href: "/library", label: "Library", icon: BookOpen },
   { href: "/history", label: "History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
 ]

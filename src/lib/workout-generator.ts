@@ -156,3 +156,4 @@ export function estimateWorkoutDuration(workout: GeneratedExercise[], energyLeve
   }, 0)
 }
 
+
