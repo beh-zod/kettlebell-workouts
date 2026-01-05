@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -16,9 +16,11 @@ export async function GET(
       )
     }
 
+    const { id } = await params
+
     const workout = await db.workout.findUnique({
       where: {
-        id: params.id
+        id
       },
       include: {
         exercises: {
@@ -59,7 +61,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -71,12 +73,13 @@ export async function PATCH(
       )
     }
 
+    const { id } = await params
     const body = await req.json()
     const { exercises, completedAt, notes, rating } = body
 
     // Verify ownership
     const existingWorkout = await db.workout.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingWorkout) {
@@ -100,7 +103,7 @@ export async function PATCH(
           db.workoutExercise.update({
             where: {
               workoutId_exerciseId_orderIndex: {
-                workoutId: params.id,
+                workoutId: id,
                 exerciseId: ex.exerciseId,
                 orderIndex: ex.orderIndex
               }
@@ -124,7 +127,7 @@ export async function PATCH(
       }, 0)
 
       await db.workout.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           totalVolume: Math.round(totalVolume)
         }
@@ -133,7 +136,7 @@ export async function PATCH(
 
     // Update workout metadata
     const workout = await db.workout.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         completedAt: completedAt ? new Date(completedAt) : undefined,
         notes,
@@ -160,7 +163,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -172,9 +175,11 @@ export async function DELETE(
       )
     }
 
+    const { id } = await params
+
     // Verify ownership
     const workout = await db.workout.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!workout) {
@@ -192,7 +197,7 @@ export async function DELETE(
     }
 
     await db.workout.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ success: true })
