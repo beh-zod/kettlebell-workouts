@@ -1715,7 +1715,7 @@ const rawExercises = [
     defaultReps: 30,
     defaultSets: 2
   }
-] as const
+]
 
 // Map raw exercises to include generated IDs
 export const exercises: ExerciseData[] = rawExercises.map(ex => ({
