@@ -19,7 +19,7 @@ function generateExerciseId(name: string): string {
   return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
 }
 
-const rawExercises = [
+const rawExercises: Omit<ExerciseData, 'id'>[] = [
   // BACK EXERCISES
   {
     name: "Single-Arm Row",
